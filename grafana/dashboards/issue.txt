@@ -1,0 +1,7 @@
+There is a open issue for loading kafka-exporting-dashboard due to "variables" in the yaml file.
+https://github.com/grafana/grafana/issues/10786
+
+You should import follwing dashboard mannually.
+https://grafana.com/grafana/dashboards/7589
+
+Please feel free to correct me if this dashbord can be provisioned in the future.

@@ -7,6 +7,7 @@ import logging
 import time
 import uuid
 from datetime import datetime
+from random import randint
 
 import kafka
 from kafka import KafkaConsumer
@@ -28,15 +29,16 @@ if __name__ == "__main__":
     logger.info('Consumer delay: %s', producer_delay)
         
     def consume_message():
+        topics = tuple('test-{0}'.format(str(x)) for x in range(0, 10))
         consumer = KafkaConsumer(bootstrap_servers=BOOTSTRAP_SERVERS, group_id='test')
-        consumer.subscribe(topics=('test',))
+        consumer.subscribe(topics=topics)
 
         counter = 0
         for msg in consumer:
             counter += 1
             if counter % 500 == 0:
                 consumer.commit()
-                logger.info('Consumer metrics: %s.', str(consumer.metrics()))
+                # logger.info('Consumer metrics: %s.', str(consumer.metrics()))
                 logger.info(msg)
 
     consume_message()

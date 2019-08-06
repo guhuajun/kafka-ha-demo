@@ -1,29 +1,29 @@
 version: "3"
 
 services:
-  # producer
-  producer:
-    image: kfkhademo/producer:0.1
-    build:
-      context: ./app/producer
-      dockerfile: Dockerfile
-    environment: 
-      - PRODUCER_DELAY=0.01
-    networks:
-      kfk-ha:
-    restart: always
+  # # producer
+  # producer:
+  #   image: kfkhademo/producer:0.1
+  #   build:
+  #     context: ./app/producer
+  #     dockerfile: Dockerfile
+  #   environment: 
+  #     - PRODUCER_DELAY=0.01
+  #   networks:
+  #     kfk-ha:
+  #   restart: always
 
-  # consumer
-  consumer:
-    image: kfkhademo/consumer:0.1
-    build:
-      context: ./app/consumer
-      dockerfile: Dockerfile
-    environment: 
-      - CONSUMER_DELAY=0.01
-    networks:
-      kfk-ha:
-    restart: always
+  # # consumer
+  # consumer:
+  #   image: kfkhademo/consumer:0.1
+  #   build:
+  #     context: ./app/consumer
+  #     dockerfile: Dockerfile
+  #   environment: 
+  #     - CONSUMER_DELAY=0.01
+  #   networks:
+  #     kfk-ha:
+  #   restart: always
 
   # zookeeper
   zk1:
@@ -31,8 +31,7 @@ services:
     hostname: zk1
     environment:
       ZOO_MY_ID: 1
-      # ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
-      ZOO_SERVERS: server.1=zk1:2888:3888
+      ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
     volumes:
       - ./data/zk1/data:/data
       - ./data/zk1/datalog:/datalog
@@ -42,40 +41,40 @@ services:
         aliases:
           - zk1
 
-  # zk2:
-  #   image: wurstmeister/zookeeper
-  #   hostname: zk2
-  #   environment:
-  #     ZOO_MY_ID: 2
-  #     ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
-  #   volumes:
-  #     - ./data/zk2/data:/data
-  #     - ./data/zk2/datalog:/datalog
-  #   networks:
-  #     kfk-ha:
-  #       ipv4_address: 172.25.0.11
-  #       aliases:
-  #         - zk2
+  zk2:
+    image: wurstmeister/zookeeper
+    hostname: zk2
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
+    volumes:
+      - ./data/zk2/data:/data
+      - ./data/zk2/datalog:/datalog
+    networks:
+      kfk-ha:
+        ipv4_address: 172.25.0.11
+        aliases:
+          - zk2
 
-  # zk3:
-  #   image: wurstmeister/zookeeper
-  #   hostname: zk3
-  #   environment:
-  #     ZOO_MY_ID: 3
-  #     ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
-  #   volumes:
-  #     - ./data/zk3/data:/data
-  #     - ./data/zk3/datalog:/datalog
-  #   networks:
-  #     kfk-ha:
-  #       ipv4_address: 172.25.0.12
-  #       aliases:
-  #         - zk3
+  zk3:
+    image: wurstmeister/zookeeper
+    hostname: zk3
+    environment:
+      ZOO_MY_ID: 3
+      ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
+    volumes:
+      - ./data/zk3/data:/data
+      - ./data/zk3/datalog:/datalog
+    networks:
+      kfk-ha:
+        ipv4_address: 172.25.0.12
+        aliases:
+          - zk3
 
   zkwebui:
     image: tobilg/zookeeper-webui
     ports:
-      - "8080:8080"
+      - 8001:8080
     environment:
       - USER=admin
       - PASSWORD=admin
@@ -83,41 +82,50 @@ services:
     networks:
       kfk-ha:
 
-  # kafka
-  kafka:
-    image: wurstmeister/kafka
+  zkexporter:
+    image: dabealu/zookeeper-exporter
+    ports:
+      - 8002:8080
     environment:
-      # - KAFKA_LISTENERS=PLAINTEXT://:9092
-      - KAFKA_ZOOKEEPER_CONNECT=zk1:2181
-      # KAFKA_ADVERTISED_HOST_NAME: 172.25.0.21
-      - KAFKA_LISTENERS=INSIDE://:9092,OUTSIDE://:9094
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
-    ports:
-      - "9092:9092"
-      - "9094:9094"
+      - USER=admin
+      - PASSWORD=admin
+      - ZK_DEFAULT_NODE=zk1:2181
     networks:
       kfk-ha:
-        ipv4_address: 172.25.0.21
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    depends_on:
-      - zk1
-      # - zk2
-      # - zk3
 
-  kafka-exporter:
-    image: danielqsj/kafka-exporter:latest
-    command: "--kafka.server=kafka:9092"
-    ports:
-      - "9308:9308"
-    networks:
-      kfk-ha:
-        aliases:
-          - kfkmon
-    depends_on:
-      - kafka
-    restart: always
+  # # kafka
+  # kafka:
+  #   image: wurstmeister/kafka
+  #   environment:
+  #     - KAFKA_ZOOKEEPER_CONNECT=zk1:2181
+  #     - KAFKA_LISTENERS=INSIDE://:9092,OUTSIDE://:9094
+  #     - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+  #     - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
+  #   ports:
+  #     - 9092:9092
+  #     - 9094:9094
+  #   networks:
+  #     kfk-ha:
+  #       ipv4_address: 172.25.0.21
+  #   # volumes:
+  #   #   - /var/run/docker.sock:/var/run/docker.sock
+  #   depends_on:
+  #     - zk1
+  #     # - zk2
+  #     # - zk3
+
+  # kafka-exporter:
+  #   image: danielqsj/kafka-exporter:latest
+  #   command: "--kafka.server=kafka:9092"
+  #   ports:
+  #     - 9308:9308
+  #   networks:
+  #     kfk-ha:
+  #       aliases:
+  #         - kfkmon
+  #   depends_on:
+  #     - kafka
+  #   restart: always
 
   # kafka-rest:
   #   image: nodefluent/kafka-rest
@@ -156,7 +164,7 @@ services:
   # kafka-schema-registry:
   #   image: confluentinc/cp-schema-registry:5.3.0
   #   ports:
-  #     - "8081:8081"
+  #     - 8081:8081
   #   environment:
   #     SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
   #     SCHEMA_REGISTRY_HOST_NAME: kafka-schema-registry
@@ -172,7 +180,7 @@ services:
   # schema-registry-ui:
   #   image: landoop/schema-registry-ui:0.9.4
   #   ports:
-  #     - "8003:8000"
+  #     - 8003:8000
   #   environment:
   #     SCHEMAREGISTRY_URL: http://kafka-schema-registry:8081/
   #     PROXY: "true"
@@ -186,7 +194,7 @@ services:
   # kafka-topics-ui:
   #   image: landoop/kafka-topics-ui:0.9.4
   #   ports:
-  #     - "8001:8000"
+  #     - 8001:8000
   #   environment:
   #     KAFKA_REST_PROXY_URL: "http://kfkrest:8082/"
   #     PROXY: "true"
@@ -200,26 +208,33 @@ services:
   #     - kafka-schema-registry
   #     - kafka-rest
 
-  # monitoring
-  prometheus:
-    image: prom/prometheus:v2.11.1
-    networks:
-      kfk-ha:
-        aliases:
-          - prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus/conf/prometheus.yml:/etc/prometheus/prometheus.yml
+  # # monitoring
+  # prometheus:
+  #   image: prom/prometheus:v2.11.1
+  #   networks:
+  #     kfk-ha:
+  #       aliases:
+  #         - prometheus
+  #   ports:
+  #     - 9090:9090
+  #   volumes:
+  #     - ./prometheus/conf/prometheus.yml:/etc/prometheus/prometheus.yml
 
-  grafana:
-    image: grafana/grafana:6.2.5
-    networks:
-      kfk-ha:
-    ports:
-      - "3000:3000"
+  # grafana:
+  #   image: grafana/grafana:6.2.5
+  #   networks:
+  #     kfk-ha:
+  #   ports:
+  #     - 3000:3000
+  #   environment: 
+  #     - GF_ALERTING_ENABLED:false
+  #     # - GF_LOG_LEVEL:DEBUG
+  #   volumes: 
+  #     # - grafana_data:/var/lib/grafana
+  #     - ./grafana/provisioning:/etc/grafana/provisioning
+  #     # - ./grafana/dashboards:/var/lib/grafana/dashboards
 
-  # ipython notebook (for developing purpose)
+  # ipython notebook (for developing kafka demo apps)
   # notebook:
   #   image: ipython/notebook
   #   environment:
@@ -238,3 +253,7 @@ networks:
       driver: default
       config:
         - subnet: "172.25.0.0/24"
+
+volumes:
+    prometheus_data: {}
+    grafana_data: {}
