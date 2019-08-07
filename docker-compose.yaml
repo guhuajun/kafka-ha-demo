@@ -9,6 +9,10 @@ services:
       dockerfile: Dockerfile
     environment: 
       - PRODUCER_DELAY=0.01
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
     networks:
       kfk-ha:
     restart: always
@@ -21,6 +25,10 @@ services:
       dockerfile: Dockerfile
     environment: 
       - CONSUMER_DELAY=0.01
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
     networks:
       kfk-ha:
     restart: always

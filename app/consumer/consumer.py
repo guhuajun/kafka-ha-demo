@@ -27,12 +27,11 @@ if __name__ == "__main__":
         producer_delay = 1.0                                    
     logger.info('Consumer delay: %s', producer_delay)
 
-BOOTSTRAP_SERVERS = list(os.getenv("BOOTSTRAP_SERVERS", "172.25.0.21:9094"))
+    bootstrap_servers = ["kafka1:19092", "kafka2:29092", "kafka3:39092"]
     
-
     def consume_message():
         topics = tuple('test-{0}'.format(str(x)) for x in range(0, 10))
-        consumer = KafkaConsumer(bootstrap_servers=BOOTSTRAP_SERVERS, group_id='test')
+        consumer = KafkaConsumer(bootstrap_servers=bootstrap_servers, group_id='test')
         consumer.subscribe(topics=topics)
 
         counter = 0
