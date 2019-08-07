@@ -35,3 +35,4 @@ scrape_configs:
 
     static_configs:
       - targets: ['kfkmon:9308']
+

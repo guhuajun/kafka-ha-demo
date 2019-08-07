@@ -1,29 +1,29 @@
 version: "3"
 
 services:
-  # # producer
-  # producer:
-  #   image: kfkhademo/producer:0.1
-  #   build:
-  #     context: ./app/producer
-  #     dockerfile: Dockerfile
-  #   environment: 
-  #     - PRODUCER_DELAY=0.01
-  #   networks:
-  #     kfk-ha:
-  #   restart: always
+  # producer
+  producer:
+    image: kfkhademo/producer:0.1
+    build:
+      context: ./app/producer
+      dockerfile: Dockerfile
+    environment: 
+      - PRODUCER_DELAY=0.01
+    networks:
+      kfk-ha:
+    restart: always
 
-  # # consumer
-  # consumer:
-  #   image: kfkhademo/consumer:0.1
-  #   build:
-  #     context: ./app/consumer
-  #     dockerfile: Dockerfile
-  #   environment: 
-  #     - CONSUMER_DELAY=0.01
-  #   networks:
-  #     kfk-ha:
-  #   restart: always
+  # consumer
+  consumer:
+    image: kfkhademo/consumer:0.1
+    build:
+      context: ./app/consumer
+      dockerfile: Dockerfile
+    environment: 
+      - CONSUMER_DELAY=0.01
+    networks:
+      kfk-ha:
+    restart: always
 
   # zookeeper
   zk1:
@@ -32,9 +32,6 @@ services:
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
-    volumes:
-      - ./data/zk1/data:/data
-      - ./data/zk1/datalog:/datalog
     networks:
       kfk-ha:
         ipv4_address: 172.25.0.10
@@ -47,9 +44,6 @@ services:
     environment:
       ZOO_MY_ID: 2
       ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
-    volumes:
-      - ./data/zk2/data:/data
-      - ./data/zk2/datalog:/datalog
     networks:
       kfk-ha:
         ipv4_address: 172.25.0.11
@@ -62,70 +56,125 @@ services:
     environment:
       ZOO_MY_ID: 3
       ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
-    volumes:
-      - ./data/zk3/data:/data
-      - ./data/zk3/datalog:/datalog
     networks:
       kfk-ha:
         ipv4_address: 172.25.0.12
         aliases:
           - zk3
 
-  zkwebui:
-    image: tobilg/zookeeper-webui
-    ports:
-      - 8001:8080
-    environment:
-      - USER=admin
-      - PASSWORD=admin
-      - ZK_DEFAULT_NODE=zk1:2181
-    networks:
-      kfk-ha:
-
-  zkexporter:
-    image: dabealu/zookeeper-exporter
-    ports:
-      - 8002:8080
-    environment:
-      - USER=admin
-      - PASSWORD=admin
-      - ZK_DEFAULT_NODE=zk1:2181
-    networks:
-      kfk-ha:
-
-  # # kafka
-  # kafka:
-  #   image: wurstmeister/kafka
-  #   environment:
-  #     - KAFKA_ZOOKEEPER_CONNECT=zk1:2181
-  #     - KAFKA_LISTENERS=INSIDE://:9092,OUTSIDE://:9094
-  #     - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-  #     - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
+  # zkwebui:
+  #   image: tobilg/zookeeper-webui
   #   ports:
-  #     - 9092:9092
-  #     - 9094:9094
+  #     - 8001:8080
+  #   environment:
+  #     - USER=admin
+  #     - PASSWORD=admin
+  #     - ZK_DEFAULT_NODE=zk1:2181
   #   networks:
   #     kfk-ha:
-  #       ipv4_address: 172.25.0.21
-  #   # volumes:
-  #   #   - /var/run/docker.sock:/var/run/docker.sock
-  #   depends_on:
-  #     - zk1
-  #     # - zk2
-  #     # - zk3
 
-  # kafka-exporter:
-  #   image: danielqsj/kafka-exporter:latest
-  #   command: "--kafka.server=kafka:9092"
+  # zkexporter:
+  #   image: dabealu/zookeeper-exporter
   #   ports:
-  #     - 9308:9308
+  #     - 8002:8080
+  #   environment:
+  #     - USER=admin
+  #     - PASSWORD=admin
+  #     - ZK_DEFAULT_NODE=zk1:2181
   #   networks:
   #     kfk-ha:
   #       aliases:
-  #         - kfkmon
+  #         - zkexporter
   #   depends_on:
-  #     - kafka
-  #   restart: always
+  #     - zk1
+  #     - zk2
+  #     - zk3
+
+  # kafka
+  kafka1:
+    image: wurstmeister/kafka
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181
+      - KAFKA_LISTENERS=INSIDE://:9092,OUTSIDE://:9094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
+    networks:
+      kfk-ha:
+        ipv4_address: 172.25.0.21
+        aliases:
+          - kafka1
+    depends_on:
+      - zk1
+      - zk2
+      - zk3
+
+  kafka2:
+    image: wurstmeister/kafka
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181
+      - KAFKA_LISTENERS=INSIDE://:9092,OUTSIDE://:9094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
+    networks:
+      kfk-ha:
+        ipv4_address: 172.25.0.22
+        aliases:
+          - kafka2
+    depends_on:
+      - zk1
+      - zk2
+      - zk3
+
+  kafka3:
+    image: wurstmeister/kafka
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181
+      - KAFKA_LISTENERS=INSIDE://:9092,OUTSIDE://:9094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
+    networks:
+      kfk-ha:
+        ipv4_address: 172.25.0.23
+        aliases:
+          - kafka3
+    depends_on:
+      - zk1
+      - zk2
+      - zk3
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    command: "--kafka.server=kafka1:9092 --kafka.server=kafka2:9092 --kafka.server=kafka3:9092"
+    ports:
+      - 9308:9308
+    networks:
+      kfk-ha:
+        aliases:
+          - kfkmon
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+    restart: always
+
+  kafka-manager:
+    image: sheepkiller/kafka-manager:alpine
+    ports:
+      - 9000:9000
+    environment:
+     - ZK_HOSTS=zk1:2181,zk2:2181,zk3:2181
+     - APPLICATION_SECRET=admin
+    networks:
+      kfk-ha:
+        aliases:
+          - kfkmon
+    depends_on:
+      - zk1
+      - zk2
+      - zk3
+      - kafka1
+      - kafka2
+    restart: always
 
   # kafka-rest:
   #   image: nodefluent/kafka-rest
@@ -208,31 +257,35 @@ services:
   #     - kafka-schema-registry
   #     - kafka-rest
 
-  # # monitoring
-  # prometheus:
-  #   image: prom/prometheus:v2.11.1
-  #   networks:
-  #     kfk-ha:
-  #       aliases:
-  #         - prometheus
-  #   ports:
-  #     - 9090:9090
-  #   volumes:
-  #     - ./prometheus/conf/prometheus.yml:/etc/prometheus/prometheus.yml
+  # monitoring
+  prometheus:
+    image: prom/prometheus:v2.11.1
+    networks:
+      kfk-ha:
+        aliases:
+          - prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/conf/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - kafka-exporter
 
-  # grafana:
-  #   image: grafana/grafana:6.2.5
-  #   networks:
-  #     kfk-ha:
-  #   ports:
-  #     - 3000:3000
-  #   environment: 
-  #     - GF_ALERTING_ENABLED:false
-  #     # - GF_LOG_LEVEL:DEBUG
-  #   volumes: 
-  #     # - grafana_data:/var/lib/grafana
-  #     - ./grafana/provisioning:/etc/grafana/provisioning
-  #     # - ./grafana/dashboards:/var/lib/grafana/dashboards
+  grafana:
+    image: grafana/grafana:6.2.5
+    networks:
+      kfk-ha:
+    ports:
+      - 3000:3000
+    environment: 
+      - GF_ALERTING_ENABLED:false
+      # - GF_LOG_LEVEL:DEBUG
+    volumes: 
+      # - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      # - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+     - prometheus
 
   # ipython notebook (for developing kafka demo apps)
   # notebook:
