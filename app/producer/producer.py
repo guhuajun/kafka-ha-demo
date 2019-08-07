@@ -13,7 +13,6 @@ import kafka
 from kafka import KafkaProducer
 from kafka.admin import KafkaAdminClient, NewTopic
 
-BOOTSTRAP_SERVERS = os.getenv("BOOTSTRAP_SERVERS", "172.25.0.21:9092")
 
 if __name__ == "__main__":
     # change logging config
@@ -29,13 +28,15 @@ if __name__ == "__main__":
         producer_delay = 1.0
     logger.info('Producer delay: %s', producer_delay)
 
+    bootstrap_servers = ["kafka1:19092", "kafka2:29092", "kafka3:39092"]
+
     def create_test_topic():
         client_id = 'producer-{0}'.format(str(uuid.uuid4()))
         admin_client = KafkaAdminClient(
-            bootstrap_servers=BOOTSTRAP_SERVERS, client_id=client_id)
+            bootstrap_servers=bootstrap_servers, client_id=client_id)
 
         topic_list = [NewTopic(name="test-{0}".format(str(x)),
-                               num_partitions=1, replication_factor=1) for x in range(0, 10)]
+                               num_partitions=3, replication_factor=3) for x in range(0, 10)]
         admin_client.create_topics(new_topics=topic_list, validate_only=False)
 
     def send_message():
@@ -45,7 +46,7 @@ if __name__ == "__main__":
             topic = 'test-{0}'.format(str(randint(0, 10)))
             body = '{0}:{1}'.format(datetime.now().strftime(
                 '%Y-%m-%d %H:%M:%S.%f'), str(uuid.uuid4()))
-            producer.send(topic, str.encode(body))
+            producer.send(topic, randint(0, 10), str.encode(body))
             time.sleep(producer_delay)
 
             counter += 1

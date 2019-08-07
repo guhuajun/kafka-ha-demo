@@ -25,13 +25,18 @@ services:
       kfk-ha:
     restart: always
 
-  # zookeeper
   zk1:
-    image: wurstmeister/zookeeper
+    image: confluentinc/cp-zookeeper:latest
     hostname: zk1
+    ports:
+      - 12181:12181
     environment:
-      ZOO_MY_ID: 1
-      ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 12181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zk1:12888:13888;zk2:22888:23888;zk3:32888:33888
     networks:
       kfk-ha:
         ipv4_address: 172.25.0.10
@@ -39,11 +44,17 @@ services:
           - zk1
 
   zk2:
-    image: wurstmeister/zookeeper
+    image: confluentinc/cp-zookeeper:latest
     hostname: zk2
+    ports:
+      - 22181:22181
     environment:
-      ZOO_MY_ID: 2
-      ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
+      ZOOKEEPER_SERVER_ID: 2
+      ZOOKEEPER_CLIENT_PORT: 22181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zk1:12888:13888;zk2:22888:23888;zk3:32888:33888
     networks:
       kfk-ha:
         ipv4_address: 172.25.0.11
@@ -51,14 +62,20 @@ services:
           - zk2
 
   zk3:
-    image: wurstmeister/zookeeper
+    image: confluentinc/cp-zookeeper:latest
     hostname: zk3
+    ports:
+      - 32181:32181
     environment:
-      ZOO_MY_ID: 3
-      ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
+      ZOOKEEPER_SERVER_ID: 3
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zk1:12888:13888;zk2:22888:23888;zk3:32888:33888
     networks:
       kfk-ha:
-        ipv4_address: 172.25.0.12
+        ipv4_address: 172.25.0.13
         aliases:
           - zk3
 
@@ -92,59 +109,68 @@ services:
 
   # kafka
   kafka1:
-    image: wurstmeister/kafka
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka1
+    ports:
+      - "19092:19092"
+    depends_on:
+      - zk1
+      - zk2
+      - zk3
     environment:
-      - KAFKA_ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181
-      - KAFKA_LISTENERS=INSIDE://:9092,OUTSIDE://:9094
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
+      JMX_PORT: 9999
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zk1:12181,zk2:22181,zk3:32181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:19092
     networks:
       kfk-ha:
         ipv4_address: 172.25.0.21
         aliases:
           - kafka1
+ 
+  kafka2:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka2
+    ports:
+      - "29092:29092"
     depends_on:
       - zk1
       - zk2
       - zk3
-
-  kafka2:
-    image: wurstmeister/kafka
     environment:
-      - KAFKA_ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181
-      - KAFKA_LISTENERS=INSIDE://:9092,OUTSIDE://:9094
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
+      JMX_PORT: 9999
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zk1:12181,zk2:22181,zk3:32181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:29092
     networks:
       kfk-ha:
         ipv4_address: 172.25.0.22
         aliases:
           - kafka2
+ 
+  kafka3:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka3
+    ports:
+      - "39092:39092"
     depends_on:
       - zk1
       - zk2
       - zk3
-
-  kafka3:
-    image: wurstmeister/kafka
     environment:
-      - KAFKA_ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181
-      - KAFKA_LISTENERS=INSIDE://:9092,OUTSIDE://:9094
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
+      JMX_PORT: 9999
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zk1:12181,zk2:22181,zk3:32181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:39092
     networks:
       kfk-ha:
         ipv4_address: 172.25.0.23
         aliases:
           - kafka3
-    depends_on:
-      - zk1
-      - zk2
-      - zk3
 
   kafka-exporter:
     image: danielqsj/kafka-exporter:latest
-    command: "--kafka.server=kafka1:9092 --kafka.server=kafka2:9092 --kafka.server=kafka3:9092"
+    command: "--kafka.server=kafka1:19092 --kafka.server=kafka2:29092 --kafka.server=kafka3:39092"
     ports:
       - 9308:9308
     networks:
@@ -162,100 +188,17 @@ services:
     ports:
       - 9000:9000
     environment:
-     - ZK_HOSTS=zk1:2181,zk2:2181,zk3:2181
+     - ZK_HOSTS=zk1:12181,zk2:22181,zk3:32181
      - APPLICATION_SECRET=admin
     networks:
       kfk-ha:
         aliases:
-          - kfkmon
+          - kfkmgr
     depends_on:
-      - zk1
-      - zk2
-      - zk3
       - kafka1
       - kafka2
+      - kafka3
     restart: always
-
-  # kafka-rest:
-  #   image: nodefluent/kafka-rest
-  #   ports:
-  #     - 8082:8082
-  #   networks:
-  #     kfk-ha:
-  #       aliases:
-  #         - kfkrest
-  #   depends_on:
-  #     - kafka
-  #     - zk1
-  #   environment:
-  #     # DEBUG: "*"
-  #     KAFKA_REST_DEBUG: "all"
-  #     KAFKA_REST_HTTP_PORT: 8082
-  #     KAFKA_REST_CONSUMER_METADATA_BROKER_LIST: "kafka:9092"
-  #     KAFKA_REST_PRODUCER_METADATA_BROKER_LIST: "kafka:9092"
-
-  # kafka-rest-ui:
-  #   image: nodefluent/kafka-rest-ui
-  #   ports:
-  #     - 8000:8000
-  #   networks:
-  #     kfk-ha:
-  #       aliases:
-  #         - kfkrestui
-  #   depends_on:
-  #     - kafka-rest
-  #   environment:
-  #     DEBUG: "*"
-  #     REACT_APP_KAFKA_REST_URL: "http://kfkrest:8082/"
-  #     REACT_APP_TIMEOUT: "3000"
-  #     PROXY: "yes"
-
-  # kafka-schema-registry:
-  #   image: confluentinc/cp-schema-registry:5.3.0
-  #   ports:
-  #     - 8081:8081
-  #   environment:
-  #     SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
-  #     SCHEMA_REGISTRY_HOST_NAME: kafka-schema-registry
-  #     SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-  #   networks:
-  #     kfk-ha:
-  #       aliases:
-  #         - kafka-schema-registry
-  #   depends_on:
-  #     - zk1
-  #     - kafka
-
-  # schema-registry-ui:
-  #   image: landoop/schema-registry-ui:0.9.4
-  #   ports:
-  #     - 8003:8000
-  #   environment:
-  #     SCHEMAREGISTRY_URL: http://kafka-schema-registry:8081/
-  #     PROXY: "true"
-  #   networks:
-  #     kfk-ha:
-  #       aliases:
-  #         - kafka-schema-registry-ui
-  #   depends_on:
-  #     - kafka-schema-registry
-
-  # kafka-topics-ui:
-  #   image: landoop/kafka-topics-ui:0.9.4
-  #   ports:
-  #     - 8001:8000
-  #   environment:
-  #     KAFKA_REST_PROXY_URL: "http://kfkrest:8082/"
-  #     PROXY: "true"
-  #   networks:
-  #     kfk-ha:
-  #       aliases:
-  #         - kafka-topics-ui
-  #   depends_on:
-  #     - zk1
-  #     - kafka
-  #     - kafka-schema-registry
-  #     - kafka-rest
 
   # monitoring
   prometheus:
@@ -279,11 +222,8 @@ services:
       - 3000:3000
     environment: 
       - GF_ALERTING_ENABLED:false
-      # - GF_LOG_LEVEL:DEBUG
     volumes: 
-      # - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
-      # - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
      - prometheus
 

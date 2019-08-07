@@ -12,7 +12,6 @@ from random import randint
 import kafka
 from kafka import KafkaConsumer
 
-BOOTSTRAP_SERVERS = os.getenv("BOOTSTRAP_SERVERS", "172.25.0.21:9094")
 
 if __name__ == "__main__":
     # change logging config
@@ -27,7 +26,10 @@ if __name__ == "__main__":
     except:                                                     
         producer_delay = 1.0                                    
     logger.info('Consumer delay: %s', producer_delay)
-        
+
+BOOTSTRAP_SERVERS = list(os.getenv("BOOTSTRAP_SERVERS", "172.25.0.21:9094"))
+    
+
     def consume_message():
         topics = tuple('test-{0}'.format(str(x)) for x in range(0, 10))
         consumer = KafkaConsumer(bootstrap_servers=BOOTSTRAP_SERVERS, group_id='test')
