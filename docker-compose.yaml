@@ -125,6 +125,8 @@ services:
       - zk1
       - zk2
       - zk3
+    healthcheck:
+      test: ps augwwx | egrep [S]upportedKafka
     environment:
       JMX_PORT: 9999
       KAFKA_BROKER_ID: 1
@@ -145,6 +147,8 @@ services:
       - zk1
       - zk2
       - zk3
+    healthcheck:
+      test: ps augwwx | egrep [S]upportedKafka
     environment:
       JMX_PORT: 9999
       KAFKA_BROKER_ID: 2
@@ -165,6 +169,8 @@ services:
       - zk1
       - zk2
       - zk3
+    healthcheck:
+      test: ps augwwx | egrep [S]upportedKafka
     environment:
       JMX_PORT: 9999
       KAFKA_BROKER_ID: 3
