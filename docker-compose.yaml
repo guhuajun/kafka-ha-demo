@@ -9,6 +9,7 @@ services:
       dockerfile: Dockerfile
     environment: 
       - PRODUCER_DELAY=0.01
+      - START_DELAY=30
     depends_on:
       - kafka1
       - kafka2

@@ -55,11 +55,11 @@ if __name__ == "__main__":
     except:
         start_delay = 30
         producer_delay = 1.0
-    logger.info('Start delay: %s', start_delay)
     logger.info('Producer delay: %s', producer_delay)
 
     # :(, make sure kafka cluster is ready brfore creating topics.
     # It's frustrated when docker-compose is difficult to control start order.
+    logger.info('Wating for %s seconds...', start_delay)
     time.sleep(start_delay)
 
     create_test_topic()
