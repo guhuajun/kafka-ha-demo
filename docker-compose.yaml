@@ -9,11 +9,9 @@ services:
       dockerfile: Dockerfile
     environment: 
       - PRODUCER_DELAY=0.01
-      - START_DELAY=30
+      - START_DELAY=60
     depends_on:
-      - kafka1
-      - kafka2
-      - kafka3
+      - grafana
     networks:
       kfk-ha:
     restart: always
@@ -26,10 +24,9 @@ services:
       dockerfile: Dockerfile
     environment: 
       - CONSUMER_DELAY=0.01
+      - START_DELAY=90
     depends_on:
-      - kafka1
-      - kafka2
-      - kafka3
+      - grafana
     networks:
       kfk-ha:
     restart: always
@@ -262,6 +259,3 @@ networks:
       config:
         - subnet: "172.25.0.0/24"
 
-volumes:
-    prometheus_data: {}
-    grafana_data: {}
