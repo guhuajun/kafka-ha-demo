@@ -122,5 +122,5 @@ Please feel free to extend the test steps.
 
 ## References
 
-https://github.com/simplesteph/kafka-stack-docker-compose/blob/master/full-stack.yml
-https://grafana.com/docs/administration/provisioning/
+* https://github.com/simplesteph/kafka-stack-docker-compose/blob/master/full-stack.yml
+* https://grafana.com/docs/administration/provisioning/
