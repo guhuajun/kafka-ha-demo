@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     bootstrap_servers = ["kafka1:19092", "kafka2:29092", "kafka3:39092"]
 
-    # :(, make sure kafka cluster is ready brfore creating topics.
+    # :(, make sure kafka cluster is ready before creating topics.
     # It's frustrated when docker-compose is difficult to control start order.
     logger.info('Wating for %s seconds...', start_delay)
     time.sleep(start_delay)
