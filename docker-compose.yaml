@@ -1,34 +1,53 @@
 version: "3"
 
 services:
-  # producer
+  traefik:
+    image: traefik:latest
+    hostname: traefik
+    command:
+      [
+        "--api.insecure=true",
+        "--providers.docker",
+        "--accesslog=true",
+        "--metrics.prometheus=true",
+      ]
+    ports:
+      # The HTTP port
+      - "80:80"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      efkpg-net:
+
   producer:
-    image: kfkhademo/producer:0.1
+    image: greggu/producer:0.1
     build:
       context: ./app/producer
       dockerfile: Dockerfile
-    environment: 
+    environment:
       - PRODUCER_DELAY=0.01
       - START_DELAY=60
     depends_on:
       - grafana
     networks:
-      kfk-ha:
+      efkpg-net:
     restart: always
 
-  # consumer
   consumer:
-    image: kfkhademo/consumer:0.1
+    image: greggu/consumer:0.1
     build:
       context: ./app/consumer
       dockerfile: Dockerfile
-    environment: 
+    environment:
       - CONSUMER_DELAY=0.01
       - START_DELAY=90
     depends_on:
       - grafana
     networks:
-      kfk-ha:
+      efkpg-net:
     restart: always
 
   zk1:
@@ -44,7 +63,7 @@ services:
       ZOOKEEPER_SYNC_LIMIT: 2
       ZOOKEEPER_SERVERS: zk1:12888:13888;zk2:22888:23888;zk3:32888:33888
     networks:
-      kfk-ha:
+      efkpg-net:
         ipv4_address: 172.25.0.10
         aliases:
           - zk1
@@ -62,10 +81,12 @@ services:
       ZOOKEEPER_SYNC_LIMIT: 2
       ZOOKEEPER_SERVERS: zk1:12888:13888;zk2:22888:23888;zk3:32888:33888
     networks:
-      kfk-ha:
+      efkpg-net:
         ipv4_address: 172.25.0.11
         aliases:
           - zk2
+    depends_on:
+      - zk1
 
   zk3:
     image: confluentinc/cp-zookeeper:latest
@@ -80,38 +101,12 @@ services:
       ZOOKEEPER_SYNC_LIMIT: 2
       ZOOKEEPER_SERVERS: zk1:12888:13888;zk2:22888:23888;zk3:32888:33888
     networks:
-      kfk-ha:
+      efkpg-net:
         ipv4_address: 172.25.0.13
         aliases:
           - zk3
-
-  # zkwebui:
-  #   image: tobilg/zookeeper-webui
-  #   ports:
-  #     - 8001:8080
-  #   environment:
-  #     - USER=admin
-  #     - PASSWORD=admin
-  #     - ZK_DEFAULT_NODE=zk1:2181
-  #   networks:
-  #     kfk-ha:
-
-  # zkexporter:
-  #   image: dabealu/zookeeper-exporter
-  #   ports:
-  #     - 8002:8080
-  #   environment:
-  #     - USER=admin
-  #     - PASSWORD=admin
-  #     - ZK_DEFAULT_NODE=zk1:2181
-  #   networks:
-  #     kfk-ha:
-  #       aliases:
-  #         - zkexporter
-  #   depends_on:
-  #     - zk1
-  #     - zk2
-  #     - zk3
+    depends_on:
+      - zk2
 
   # kafka
   kafka1:
@@ -131,11 +126,11 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zk1:12181,zk2:22181,zk3:32181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:19092
     networks:
-      kfk-ha:
+      efkpg-net:
         ipv4_address: 172.25.0.21
         aliases:
           - kafka1
- 
+
   kafka2:
     image: confluentinc/cp-kafka:latest
     hostname: kafka2
@@ -145,6 +140,7 @@ services:
       - zk1
       - zk2
       - zk3
+      - kafka1
     healthcheck:
       test: ps augwwx | egrep [S]upportedKafka
     environment:
@@ -153,11 +149,11 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zk1:12181,zk2:22181,zk3:32181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:29092
     networks:
-      kfk-ha:
+      efkpg-net:
         ipv4_address: 172.25.0.22
         aliases:
           - kafka2
- 
+
   kafka3:
     image: confluentinc/cp-kafka:latest
     hostname: kafka3
@@ -167,6 +163,7 @@ services:
       - zk1
       - zk2
       - zk3
+      - kafka2
     healthcheck:
       test: ps augwwx | egrep [S]upportedKafka
     environment:
@@ -175,18 +172,19 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zk1:12181,zk2:22181,zk3:32181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:39092
     networks:
-      kfk-ha:
+      efkpg-net:
         ipv4_address: 172.25.0.23
         aliases:
           - kafka3
 
   kafka-exporter:
     image: danielqsj/kafka-exporter:latest
+    hostname: kafka-exporter
     command: "--kafka.server=kafka1:19092 --kafka.server=kafka2:29092 --kafka.server=kafka3:39092"
     ports:
       - 9308:9308
     networks:
-      kfk-ha:
+      efkpg-net:
         aliases:
           - kfkmon
     depends_on:
@@ -197,13 +195,16 @@ services:
 
   kafka-manager:
     image: sheepkiller/kafka-manager:alpine
-    ports:
-      - 9000:9000
+    hostname: kafka-manager
+    labels:
+      - "traefik.http.routers.kfmanager.rule=Host(`kfmanager.tools.contoso.com`)"
+    # ports:
+    #   - 9000:9000
     environment:
-     - ZK_HOSTS=zk1:12181,zk2:22181,zk3:32181
-     - APPLICATION_SECRET=admin
+      - ZK_HOSTS=zk1:12181,zk2:22181,zk3:32181
+      - APPLICATION_SECRET=admin
     networks:
-      kfk-ha:
+      efkpg-net:
         aliases:
           - kfkmgr
     depends_on:
@@ -215,8 +216,11 @@ services:
   # monitoring
   prometheus:
     image: prom/prometheus:v2.11.1
+    hostname: prometheus
+    labels:
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.tools.contoso.com`)"
     networks:
-      kfk-ha:
+      efkpg-net:
         aliases:
           - prometheus
     ports:
@@ -228,34 +232,49 @@ services:
 
   grafana:
     image: grafana/grafana:6.2.5
+    hostname: grafana
+    labels:
+      - "traefik.http.routers.grafana.rule=Host(`grafana.tools.contoso.com`)"
     networks:
-      kfk-ha:
+      efkpg-net:
     ports:
       - 3000:3000
-    environment: 
+    environment:
       - GF_ALERTING_ENABLED:false
-    volumes: 
+    volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
-     - prometheus
+      - prometheus
 
-  # ipython notebook (for developing kafka demo apps)
-  # notebook:
-  #   image: ipython/notebook
-  #   environment:
-  #     - PASSWORD=admin
-  #     - USE_HTTP=1
-  #   ports:
-  #     - 8888:8888
-  #   networks:
-  #     kfk-ha:
-  #   volumes: 
-  #     - ./notebooks:/notebooks/
+  # efk
+  elasticsearch:
+    image: elasticsearch:7.8.1
+    hostname: elasticsearch
+    labels:
+      - "traefik.http.routers.es.rule=Host(`es.tools.contoso.com`)"
+    networks:
+      efkpg-net:
+    # ports:
+    #   - 9201:9201
+    environment:
+      ES_JAVA_OPTS: "-Xms750m -Xmx750m"
+    depends_on:
+      - traefik
+
+  kibana:
+    image: kibana:7.8.1
+    hostname: kibana
+    labels:
+      - "traefik.http.routers.kibana.rule=Host(`kibana.tools.contoso.com`)"
+    networks:
+      efkpg-net:
+    depends_on:
+      - traefik
+      - elasticsearch
 
 networks:
-  kfk-ha:
+  efkpg-net:
     ipam:
       driver: default
       config:
         - subnet: "172.25.0.0/24"
-

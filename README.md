@@ -1,4 +1,4 @@
-# kafka-ha-demo
+# efkpg-demo
 A project for demostrating a kafka cluster.
 
 ## Topology
