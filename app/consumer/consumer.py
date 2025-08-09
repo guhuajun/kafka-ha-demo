@@ -23,11 +23,11 @@ if __name__ == "__main__":
 
     try:
         start_delay = float(os.getenv('START_DELAY', 1.0))
-        producer_delay = float(os.getenv('CONSUMER_DELAY', 1.0))
+        consumer_delay = float(os.getenv('CONSUMER_DELAY', 1.0))
     except:
         start_delay = 30
-        producer_delay = 1.0
-    logger.info('Consumer delay: %s', producer_delay)
+        consumer_delay = 1.0
+    logger.info('Consumer delay: %s', consumer_delay)
 
     bootstrap_servers = ["kafka1:19092", "kafka2:29092", "kafka3:39092"]
 

@@ -57,12 +57,12 @@ Grafana: http://localhost:3000
 ## Test
 1. Run following command to scale-out producer.
 ```bash
-docker-compose scale producer=2
+docker compose scale producer=2
 ```
 
 2. Run following command to stop kafka2 (in another terminal session)
 ```bash
-docker-compose stop kafka2
+docker compose stop kafka2
 ```
 
 ```bash
@@ -119,6 +119,11 @@ docker-compose down
 ## Note
 
 Please feel free to extend the test steps.
+For elasticserach, you may need to run following command when start this lab in a new vm.
+
+```bash
+sudo sysctl -w vm.max_map_count=262144
+```
 
 ## References
 
